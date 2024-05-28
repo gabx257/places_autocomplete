@@ -1,43 +1,28 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:http/http.dart';
 
 import '/model/place.dart';
 import '/model/suggestion.dart';
 
-/* FOR DEBUGGING */
-void printWrapped(String text) {
-  final pattern = RegExp('.{1,800}'); // 800 is the size of each chunk
-  pattern.allMatches(text).forEach((match) => debugPrint(match.group(0)));
-}
-
-void printJson(dynamic json, {String? title}) {
-  JsonEncoder encoder = const JsonEncoder.withIndent('  ');
-
-  // encode it to string
-  String prettyPrint = encoder.convert(json);
-
-  if (title != null) {
-    debugPrint(title);
-  }
-  printWrapped(prettyPrint);
-}
-
-const bool debugJson = false;
-/* END FOR DEBUGGING */
-
 class PlaceApiProvider {
-  final client = Client();
-
   PlaceApiProvider(
-      this.sessionToken, this.mapsApiKey, this.compomentCountry, this.language);
+      {required this.sessionToken,
+      this.mapsApiKey,
+      this.proxyServerAutocomplete,
+      this.proxyServerDetails,
+      this.componentCountry,
+      this.language});
 
+  final client = Client();
   final String sessionToken;
-  final String mapsApiKey;
-  final String? compomentCountry;
+  final String? mapsApiKey;
+  final String? componentCountry;
   final String? language;
+  final Uri? proxyServerAutocomplete;
+  final Uri? proxyServerDetails;
 
-/* Example JSON returned from Places autocomplete suggestions API request
+  /* Example JSON returned from Places autocomplete suggestions API request
     (ie.
       host: 'maps.googleapis.com',
         path: '/maps/api/place/autocomplete/json', )
@@ -97,6 +82,7 @@ result["predictions"] =
   
 ]
 */
+
   ///[includeFullSuggestionDetails] if we should include ALL details that are returned in API suggestions.
   ///   (This is sent as true when the `onInitialSuggestionClick` is in use)
   ///[postalCodeLookup] if we should request `postal_code` type return information
@@ -104,28 +90,27 @@ result["predictions"] =
   Future<List<Suggestion>> fetchSuggestions(String input,
       {bool includeFullSuggestionDetails = false,
       bool postalCodeLookup = false}) async {
-    final Map<String, dynamic> parameters = <String, dynamic>{
+    final Map<String, dynamic> parameters = {
       'input': input,
-      'types': postalCodeLookup
-          ? 'postal_code'
-          : 'address', // this is for looking up fully qualified addresses
-      // Could be used for ZIP lookups//   'types': 'postal_code',
-      'key': mapsApiKey,
+      'types': postalCodeLookup ? 'postal_code' : 'address',
       'sessiontoken': sessionToken
     };
 
-    if (language != null) {
-      parameters.addAll(<String, dynamic>{'language': language});
+    if (proxyServerAutocomplete != null) {
+      parameters['key'] = mapsApiKey;
     }
-    if (compomentCountry != null) {
-      parameters
-          .addAll(<String, dynamic>{'components': 'country:$compomentCountry'});
+    if (language != null) {
+      parameters['language'] = language;
+    }
+    if (componentCountry != null) {
+      parameters['components'] = 'country:$componentCountry';
     }
 
     final Uri request = Uri(
         scheme: 'https',
-        host: 'maps.googleapis.com',
-        path: '/maps/api/place/autocomplete/json',
+        host: proxyServerAutocomplete?.host ?? 'maps.googleapis.com',
+        path: proxyServerAutocomplete?.path ??
+            '/maps/api/place/autocomplete/json',
         queryParameters: parameters);
 
     final response = await client.get(request);
@@ -133,11 +118,6 @@ result["predictions"] =
     if (response.statusCode == 200) {
       final result = json.decode(response.body);
       if (result['status'] == 'OK') {
-        if (debugJson) {
-          printJson(result['predictions'],
-              title: 'GOOGLE MAP API RETURN VALUE result["predictions"]');
-        }
-
         // compose suggestions in a list
         return result['predictions'].map<Suggestion>((p) {
           if (includeFullSuggestionDetails) {
@@ -166,7 +146,7 @@ result["predictions"] =
       }
       throw Exception(result['error_message']);
     } else {
-      throw Exception('Failed to fetch suggestion');
+      throw const HttpException('Failed to fetch suggestion');
     }
   }
 
@@ -267,6 +247,7 @@ result["result"]
   "name": "6781 Eastside Rd"
 }
   */
+
   ///Requests full address info from Google Places API for the specified
   ///[placeId] and returns a [Place] object returned info.
   Future<Place> getPlaceDetailFromId(String placeId) async {
@@ -274,21 +255,20 @@ result["result"]
     final Map<String, dynamic> parameters = <String, dynamic>{
       'place_id': placeId,
       'fields': 'name,formatted_address,address_component,geometry',
-      'key': mapsApiKey,
       'sessiontoken': sessionToken
     };
     final Uri request = Uri(
-        scheme: 'https',
-        host: 'maps.googleapis.com',
-        path: '/maps/api/place/details/json',
+        scheme: proxyServerDetails?.scheme ?? 'https',
+        host: proxyServerDetails?.host ?? 'maps.googleapis.com',
+        path: proxyServerDetails?.path ?? '/maps/api/place/details/json',
 
         //PlaceApiNew     host: 'places.googleapis.com',
         //PlaceApiNew     path: '/v1/places/$placeId',
 
         queryParameters: parameters);
 
-    if (debugJson) {
-      debugPrint(request.toString());
+    if (proxyServerDetails != null) {
+      parameters['key'] = mapsApiKey;
     }
 
     final response = await client.get(request);
@@ -302,10 +282,6 @@ result["result"]
     if (response.statusCode == 200) {
       final result = json.decode(response.body);
       if (result['status'] == 'OK') {
-        if (debugJson) {
-          printJson(result['result'],
-              title: 'GOOGLE MAP API RETURN VALUE result["result"]');
-        }
         final components =
             result['result']['address_components'] as List<dynamic>;
 
@@ -365,9 +341,9 @@ result["result"]
         }
         return place;
       }
-      throw Exception(result['error_message']);
+      throw HttpException(result['error_message']);
     } else {
-      throw Exception('Failed to fetch suggestion');
+      throw const HttpException('Failed to fetch suggestion');
     }
   }
 }

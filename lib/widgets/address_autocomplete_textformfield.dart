@@ -51,7 +51,17 @@ class AddressAutocompleteTextFormField
 
   ///your maps api key, must not be null
   @override
-  final String mapsApiKey;
+  final String? mapsApiKey;
+
+  ///proxy server for autocomplete requests, must not be null if you are not using a mapsApiKey
+  ///if you are using a proxy server, you must also provide a [proxyServerDetails]
+  @override
+  final Uri? proxyServerAutocomplete;
+
+  ///proxy server for place details requests, must not be null if you are using a proxy server
+  ///if you are using a proxy server, you must also provide a [proxyServerAutocomplete]
+  @override
+  final Uri? proxyServerDetails;
 
   ///builder used to render each item displayed
   ///must not be null
@@ -211,7 +221,9 @@ class AddressAutocompleteTextFormField
 
   const AddressAutocompleteTextFormField({
     super.key,
-    required this.mapsApiKey,
+    this.mapsApiKey,
+    this.proxyServerAutocomplete,
+    this.proxyServerDetails,
     this.controller,
     this.requiredField = false,
     this.validator = defaultValidator,
@@ -297,6 +309,8 @@ class _AddressAutocompleteTextFormFieldState
   final LayerLink layerLink = LayerLink();
   @override
   final String sessionToken = const Uuid().v4();
+  @override
+  Uri? proxyServer;
 
   // [_controller] is not final because it is possible that the dispose() can happen
   //  if caller does setState(), so we must be able to set it to null after dispose so that any

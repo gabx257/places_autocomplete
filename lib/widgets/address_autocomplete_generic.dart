@@ -38,8 +38,16 @@ abstract class AddresssAutocompleteStatefulWidget extends StatefulWidget {
   abstract final String? Function(Place place)?
       onSuggestionClickGetTextToUseForControl;
 
-  ///your maps api key, must not be null
-  abstract final String mapsApiKey;
+  ///your maps api key, must not be null if you are not using a proxy server
+  abstract final String? mapsApiKey;
+
+  ///proxy server for autocomplete requests, must not be null if you are not using a mapsApiKey
+  ///if you are using a proxy server, you must also provide a [proxyServerDetails]
+  abstract final Uri? proxyServerAutocomplete;
+
+  ///proxy server for place details requests, must not be null if you are using a proxy server
+  ///if you are using a proxy server, you must also provide a [proxyServerAutocomplete]
+  abstract final Uri? proxyServerDetails;
 
   ///builder used to render each item displayed
   ///must not be null
@@ -126,8 +134,17 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
         widget.controller ?? TextEditingController(text: widget.initialValue);
     focusNode = widget.focusNode ?? FocusNode();
 
-    addressService = AddressService(sessionToken, widget.mapsApiKey,
-        widget.componentCountry, widget.language);
+    assert((widget.proxyServerAutocomplete != null &&
+            widget.proxyServerDetails != null) ||
+        widget.mapsApiKey != null);
+
+    addressService = AddressService(
+        sessionToken: sessionToken,
+        mapsApiKey: widget.mapsApiKey,
+        componentCountry: widget.componentCountry,
+        language: widget.language,
+        proxyServerAutocomplete: widget.proxyServerAutocomplete,
+        proxyServerDetails: widget.proxyServerDetails);
 
     focusNode.addListener(showOrHideOverlayOnFocusChange);
   }
@@ -180,31 +197,32 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
   }
 
   void hideOverlay({bool suggestionHasBeenSelected = false}) {
-    if(entry != null) {
+    if (entry != null) {
       entry?.remove();
       entry = null;
-debugPrint('hideOverlay suggestionHasBeenSelected=$suggestionHasBeenSelected');
-      if(!suggestionHasBeenSelected) {
+      debugPrint(
+          'hideOverlay suggestionHasBeenSelected=$suggestionHasBeenSelected');
+      if (!suggestionHasBeenSelected) {
         triggerNoSuggestionCallback();
       }
     }
   }
 
   void triggerNoSuggestionCallback() {
-    if(widget.onFinishedEditingWithNoSuggestion != null) {
+    if (widget.onFinishedEditingWithNoSuggestion != null) {
       widget.onFinishedEditingWithNoSuggestion!(controller?.text ?? '');
     }
   }
+
   void _clearText() {
     setState(() {
       if (widget.onClearClick != null) {
         widget.onClearClick!();
       }
       controller?.clear();
-      if(!focusNode.hasFocus) {
+      if (!focusNode.hasFocus) {
         triggerNoSuggestionCallback();
-      }
-      else {
+      } else {
         focusNode.unfocus();
       }
       suggestions = [];
