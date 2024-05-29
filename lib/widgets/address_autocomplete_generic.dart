@@ -111,6 +111,7 @@ abstract class AddresssAutocompleteStatefulWidget extends StatefulWidget {
   abstract final bool expands;
   abstract final int? maxLength;
   abstract final ValueChanged<String>? onChanged;
+  abstract final ValueChanged<String?>? onSave;
 }
 
 abstract class OverlaySuggestionDetails {
@@ -271,44 +272,6 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
       ),
     );
   }
-
-  /* OLD mechanism
-  List<Widget> buildListAsRows() {
-    List<Widget> list = [];
-    for (int i = 0; i < suggestions.length; i++) {
-      Suggestion s = suggestions[i];
-      Widget w = InkWell(
-        child: widget.buildItem(s, i),
-        onTap: () async {
-          debugPrint('onTap on a suggestion');
-          hideOverlay();
-          focusNode.unfocus();
-          if (widget.onInitialSuggestionClick != null) {
-            widget.onInitialSuggestionClick!(s);
-          }
-          if (widget.onSuggestionClickGetTextToUseForControl != null ||
-              widget.onSuggestionClick != null) {
-            // If they need more details now do async request
-            // for Place details..
-            Place place = await addressService.getPlaceDetail(s.placeId);
-            if (widget.onSuggestionClickGetTextToUseForControl != null) {
-              controller?.text =
-                  widget.onSuggestionClickGetTextToUseForControl!(place) ?? '';
-            } else {
-              // default to full formatted address
-              controller?.text = place.formattedAddress ?? '';
-            }
-            if (widget.onSuggestionClick != null) {
-              widget.onSuggestionClick!(place);
-            }
-          }
-        },
-      );
-      list.add(w);
-    }
-    return list;
-  }
-  old mechanism */
 
   Widget buildOverlay() => TextFieldTapRegion(
       child: Material(

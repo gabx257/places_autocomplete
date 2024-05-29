@@ -169,6 +169,9 @@ class AddressAutocompleteTextFormField
   @override
   final bool? showCursor;
 
+  @override
+  final ValueChanged<String?>? onSave;
+
   final SmartDashesType? smartDashesType;
   final SmartQuotesType? smartQuotesType;
   final bool enableSuggestions;
@@ -231,6 +234,7 @@ class AddressAutocompleteTextFormField
     this.reportValidationFailAndRequestFocus,
     this.debounceTime = 600,
     this.prepareQuery,
+    this.onSave,
     this.onClearClick,
     this.onInitialSuggestionClick,
     this.onSuggestionClick,
@@ -309,8 +313,6 @@ class _AddressAutocompleteTextFormFieldState
   final LayerLink layerLink = LayerLink();
   @override
   final String sessionToken = const Uuid().v4();
-  @override
-  Uri? proxyServer;
 
   // [_controller] is not final because it is possible that the dispose() can happen
   //  if caller does setState(), so we must be able to set it to null after dispose so that any
@@ -375,7 +377,6 @@ class _AddressAutocompleteTextFormFieldState
             controller: controller,
             onChanged: onTextChanges,
             decoration: getInputDecoration(),
-
             key: widget.textFormFieldKey,
             validator: widget.validator != null
                 ? validatorWithFocusHandlingWrapper
@@ -387,6 +388,7 @@ class _AddressAutocompleteTextFormFieldState
             textCapitalization: widget.textCapitalization,
             textInputAction: widget.textInputAction,
             style: widget.style,
+            onSaved: widget.onSave,
             strutStyle: widget.strutStyle,
             textDirection: widget.textDirection,
             textAlign: widget.textAlign,

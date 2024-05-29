@@ -174,6 +174,8 @@ class AddressAutocompleteTextField extends AddresssAutocompleteStatefulWidget {
 
   @override
   final ValueChanged<String>? onChanged;
+  @override
+  final ValueChanged<String?>? onSave;
 
   const AddressAutocompleteTextField({
     super.key,
@@ -184,6 +186,7 @@ class AddressAutocompleteTextField extends AddresssAutocompleteStatefulWidget {
     this.focusNode,
     this.initialValue,
     this.prepareQuery,
+    this.onSave,
     this.onClearClick,
     this.onInitialSuggestionClick,
     this.onSuggestionClick,
@@ -236,9 +239,6 @@ class _AddressAutocompleteTextFieldState
 
   @override
   final String sessionToken = const Uuid().v4();
-
-  @override
-  Uri? proxyServer;
 
   @override
   TextEditingController? controller;
