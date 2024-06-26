@@ -129,7 +129,6 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
     on State<T> implements OverlaySuggestionDetails {
   @override
   void initState() {
-    debugPrint('SuggestionOverlayMixin init() called!!!!');
     super.initState();
     controller =
         widget.controller ?? TextEditingController(text: widget.initialValue);
@@ -152,8 +151,6 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
 
   @override
   void dispose() {
-    debugPrint('SuggestionOverlayMixin dispose() called!!!!');
-
     if (widget.controller == null) {
       controller!.dispose(); // only dispose if we created it
       controller = null;
@@ -201,8 +198,6 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
     if (entry != null) {
       entry?.remove();
       entry = null;
-      debugPrint(
-          'hideOverlay suggestionHasBeenSelected=$suggestionHasBeenSelected');
       if (!suggestionHasBeenSelected) {
         triggerNoSuggestionCallback();
       }
