@@ -17,6 +17,7 @@ class Place {
   String? country;
   double? lat;
   double? lng;
+  String? neighborhood;
 
   Place({
     this.name,
@@ -28,6 +29,7 @@ class Place {
     this.street,
     this.city,
     this.county,
+    this.neighborhood,
     this.state,
     this.stateShort,
     this.zipCode,

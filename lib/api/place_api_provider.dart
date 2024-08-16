@@ -305,6 +305,9 @@ result["result"]
             place.street = component['long_name'];
             place.streetShort = component['short_name'];
           }
+          if (type.contains('neighborhood')) {
+            place.neighborhood = component['long_name'];
+          }
           if (type.contains('sublocality') ||
               type.contains('sublocality_level_1')) {
             place.vicinity = component['long_name'];
