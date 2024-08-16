@@ -170,7 +170,7 @@ class AddressAutocompleteTextFormField
   final bool? showCursor;
 
   @override
-  final ValueChanged<String?>? onSave;
+  final ValueChanged<Place?>? onSave;
 
   final SmartDashesType? smartDashesType;
   final SmartQuotesType? smartQuotesType;
@@ -329,6 +329,8 @@ class _AddressAutocompleteTextFormFieldState
   List<Suggestion> suggestions = [];
   @override
   Timer? debounceTimer;
+  @override
+  Suggestion? selected;
 
   void weHaveValidationErrorRequestFocusIfAvailable(String validationErrorMsg) {
     // If there is an error for this input then request focus here
@@ -388,7 +390,12 @@ class _AddressAutocompleteTextFormFieldState
             textCapitalization: widget.textCapitalization,
             textInputAction: widget.textInputAction,
             style: widget.style,
-            onSaved: widget.onSave,
+            onSaved: (s) {
+              if (selected == null) return;
+              addressService
+                  .getPlaceDetail(selected!.placeId)
+                  .then((v) => widget.onSave?.call(v));
+            },
             strutStyle: widget.strutStyle,
             textDirection: widget.textDirection,
             textAlign: widget.textAlign,

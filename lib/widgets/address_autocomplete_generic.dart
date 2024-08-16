@@ -111,7 +111,7 @@ abstract class AddresssAutocompleteStatefulWidget extends StatefulWidget {
   abstract final bool expands;
   abstract final int? maxLength;
   abstract final ValueChanged<String>? onChanged;
-  abstract final ValueChanged<String?>? onSave;
+  abstract final ValueChanged<Place?>? onSave;
 }
 
 abstract class OverlaySuggestionDetails {
@@ -121,6 +121,7 @@ abstract class OverlaySuggestionDetails {
   abstract FocusNode focusNode;
   abstract AddressService addressService;
   abstract OverlayEntry? entry;
+  abstract Suggestion? selected;
   abstract List<Suggestion> suggestions;
   abstract Timer? debounceTimer;
 }
@@ -236,17 +237,18 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
         highlightColor: widget.selectionColor,
         onTap: () async {
           if (index < suggestions.length) {
-            final s = suggestions[index];
+            selected = suggestions[index];
             hideOverlay(suggestionHasBeenSelected: true);
             focusNode.unfocus();
             if (widget.onInitialSuggestionClick != null) {
-              widget.onInitialSuggestionClick!(s);
+              widget.onInitialSuggestionClick!(selected!);
             }
             if (widget.onSuggestionClickGetTextToUseForControl != null ||
                 widget.onSuggestionClick != null) {
               // If they need more details now do async request
               // for Place details..
-              Place place = await addressService.getPlaceDetail(s.placeId);
+              Place place =
+                  await addressService.getPlaceDetail(selected!.placeId);
               if (widget.onSuggestionClickGetTextToUseForControl != null) {
                 controller?.text =
                     widget.onSuggestionClickGetTextToUseForControl!(place) ??

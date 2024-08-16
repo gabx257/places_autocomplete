@@ -175,7 +175,7 @@ class AddressAutocompleteTextField extends AddresssAutocompleteStatefulWidget {
   @override
   final ValueChanged<String>? onChanged;
   @override
-  final ValueChanged<String?>? onSave;
+  final ValueChanged<Place?>? onSave;
 
   const AddressAutocompleteTextField({
     super.key,
@@ -245,6 +245,9 @@ class _AddressAutocompleteTextFieldState
 
   @override
   late final FocusNode focusNode;
+
+  @override
+  Suggestion? selected;
 
   @override
   late AddressService addressService;
