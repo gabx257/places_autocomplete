@@ -288,6 +288,7 @@ result["result"]
         // build result
         final place = Place();
 
+        place.placeId = placeId;
         place.formattedAddress = result['result']['formatted_address'];
         place.name = result['result']['name'];
         place.lat = result['result']['geometry']['location']['lat'] as double;

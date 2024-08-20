@@ -1,4 +1,5 @@
 class Place {
+  String? placeId;
   String? name;
   String? formattedAddress;
   String? formattedAddressZipPlus4;
@@ -19,27 +20,27 @@ class Place {
   double? lng;
   String? neighborhood;
 
-  Place({
-    this.name,
-    this.formattedAddress,
-    this.formattedAddressZipPlus4,
-    this.streetAddress,
-    this.streetNumber,
-    this.streetShort,
-    this.street,
-    this.city,
-    this.county,
-    this.neighborhood,
-    this.state,
-    this.stateShort,
-    this.zipCode,
-    this.zipCodeSuffix,
-    this.zipCodePlus4,
-    this.vicinity,
-    this.country,
-    this.lat,
-    this.lng,
-  });
+  Place(
+      {this.name,
+      this.formattedAddress,
+      this.formattedAddressZipPlus4,
+      this.streetAddress,
+      this.streetNumber,
+      this.streetShort,
+      this.street,
+      this.city,
+      this.county,
+      this.neighborhood,
+      this.state,
+      this.stateShort,
+      this.zipCode,
+      this.zipCodeSuffix,
+      this.zipCodePlus4,
+      this.vicinity,
+      this.country,
+      this.lat,
+      this.lng,
+      this.placeId});
 
   @override
   String toString() {
