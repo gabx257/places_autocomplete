@@ -312,12 +312,13 @@ result["result"]
           if (type.contains('sublocality') ||
               type.contains('sublocality_level_1')) {
             place.vicinity = component['long_name'];
+            place.neighborhood ??= component['long_name'];
           }
           if (type.contains('locality')) {
             place.city = component['long_name'];
           }
           if (type.contains('administrative_area_level_2')) {
-            place.county = component['long_name'];
+            place.city ??= component['long_name'];
           }
           if (type.contains('administrative_area_level_1')) {
             place.state = component['long_name'];
