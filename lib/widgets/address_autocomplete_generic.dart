@@ -5,9 +5,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../api/place_api_provider.dart';
 import '/model/suggestion.dart';
 import '/model/place.dart';
-import '/service/address_service.dart';
 
 abstract class AddresssAutocompleteStatefulWidget extends StatefulWidget {
   const AddresssAutocompleteStatefulWidget({super.key});
@@ -31,7 +31,7 @@ abstract class AddresssAutocompleteStatefulWidget extends StatefulWidget {
   abstract final void Function(Place place)? onSuggestionClick;
 
   //callback triggered when losing focus but no suggestion was selected
-  abstract final void Function(String text)? onFinishedEditingWithNoSuggestion;
+  abstract final void Function(String text)? onFinishedWithNoSuggestion;
 
   ///Callback triggered when a
   /// item is selected
@@ -75,7 +75,7 @@ abstract class AddresssAutocompleteStatefulWidget extends StatefulWidget {
   abstract final bool showGoogleTradeMark;
 
   ///used to narrow down address search
-  abstract final String? componentCountry;
+  abstract final List<String>? componentCountry;
 
   ///Inform Google places of desired language the results should be returned.
   abstract final String? language;
@@ -114,20 +114,17 @@ abstract class AddresssAutocompleteStatefulWidget extends StatefulWidget {
   abstract final ValueChanged<Place?>? onSave;
 }
 
-abstract class OverlaySuggestionDetails {
+mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
+    on State<T> {
   abstract final LayerLink layerLink;
   abstract final String sessionToken;
   abstract TextEditingController? controller;
   abstract FocusNode focusNode;
-  abstract AddressService addressService;
+  abstract PlaceApiProvider placeApi;
   abstract OverlayEntry? entry;
   abstract Suggestion? selected;
   abstract List<Suggestion> suggestions;
   abstract Timer? debounceTimer;
-}
-
-mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
-    on State<T> implements OverlaySuggestionDetails {
   @override
   void initState() {
     super.initState();
@@ -139,7 +136,7 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
             widget.proxyServerDetails != null) ||
         widget.mapsApiKey != null);
 
-    addressService = AddressService(
+    placeApi = PlaceApiProvider(
         sessionToken: sessionToken,
         mapsApiKey: widget.mapsApiKey,
         componentCountry: widget.componentCountry,
@@ -176,23 +173,21 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
   }
 
   void showOverlay() {
-    if (context.mounted) {
-      if (context.findRenderObject() != null) {
-        final overlay = Overlay.of(context);
-        final RenderBox renderBox = context.findRenderObject() as RenderBox;
-        final size = renderBox.size;
-        entry = OverlayEntry(
-            builder: (overlayBuildContext) => Positioned(
-                  width: size.width,
-                  child: CompositedTransformFollower(
-                      link: layerLink,
-                      showWhenUnlinked: false,
-                      offset: Offset(0, size.height + widget.overlayOffset),
-                      child: buildOverlay()),
-                ));
-        overlay.insert(entry!);
-      }
-    }
+    if (!context.mounted) return;
+    if (context.findRenderObject() == null) return;
+    final overlay = Overlay.of(context);
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    entry = OverlayEntry(
+        builder: (overlayContext) => Positioned(
+              width: renderBox.size.width,
+              child: CompositedTransformFollower(
+                  link: layerLink,
+                  showWhenUnlinked: false,
+                  offset:
+                      Offset(0, renderBox.size.height + widget.overlayOffset),
+                  child: buildOverlay()),
+            ));
+    overlay.insert(entry!);
   }
 
   void hideOverlay({bool suggestionHasBeenSelected = false}) {
@@ -200,14 +195,10 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
       entry?.remove();
       entry = null;
       if (!suggestionHasBeenSelected) {
-        triggerNoSuggestionCallback();
+        if (widget.onFinishedWithNoSuggestion != null) {
+          widget.onFinishedWithNoSuggestion!(controller?.text ?? '');
+        }
       }
-    }
-  }
-
-  void triggerNoSuggestionCallback() {
-    if (widget.onFinishedEditingWithNoSuggestion != null) {
-      widget.onFinishedEditingWithNoSuggestion!(controller?.text ?? '');
     }
   }
 
@@ -218,7 +209,9 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
       }
       controller?.clear();
       if (!focusNode.hasFocus) {
-        triggerNoSuggestionCallback();
+        if (widget.onFinishedWithNoSuggestion != null) {
+          widget.onFinishedWithNoSuggestion!(controller?.text ?? '');
+        }
       } else {
         focusNode.unfocus();
       }
@@ -236,31 +229,30 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
         hoverColor: widget.hoverColor,
         highlightColor: widget.selectionColor,
         onTap: () async {
-          if (index < suggestions.length) {
-            selected = suggestions[index];
-            hideOverlay(suggestionHasBeenSelected: true);
-            focusNode.unfocus();
-            if (widget.onInitialSuggestionClick != null) {
-              widget.onInitialSuggestionClick!(selected!);
-            }
-            if (widget.onSuggestionClickGetTextToUseForControl != null ||
-                widget.onSuggestionClick != null) {
-              // If they need more details now do async request
-              // for Place details..
-              Place place =
-                  await addressService.getPlaceDetail(selected!.placeId);
-              if (widget.onSuggestionClickGetTextToUseForControl != null) {
-                controller?.text =
-                    widget.onSuggestionClickGetTextToUseForControl!(place) ??
-                        '';
-              } else {
-                // default to full formatted address
-                controller?.text = place.formattedAddress ?? '';
-              }
-              if (widget.onSuggestionClick != null) {
-                widget.onSuggestionClick!(place);
-              }
-            }
+          if (index >= suggestions.length) return;
+
+          selected = suggestions[index];
+          hideOverlay(suggestionHasBeenSelected: true);
+          focusNode.unfocus();
+
+          if (widget.onInitialSuggestionClick != null) {
+            widget.onInitialSuggestionClick!(selected!);
+          }
+          if (widget.onSuggestionClickGetTextToUseForControl != null ||
+              widget.onSuggestionClick == null) return;
+          // If they need more details now do async request
+          // for Place details..
+          Place place = await placeApi.getPlaceDetailFromId(selected!.placeId);
+
+          if (widget.onSuggestionClickGetTextToUseForControl != null) {
+            controller?.text =
+                widget.onSuggestionClickGetTextToUseForControl!(place) ?? '';
+          } else {
+            // default to full formatted address
+            controller?.text = place.formattedAddress ?? '';
+          }
+          if (widget.onSuggestionClick != null) {
+            widget.onSuggestionClick!(place);
           }
         },
         child: widget.buildItem != null
@@ -271,7 +263,7 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
   }
 
   Widget buildOverlay() => TextFieldTapRegion(
-      child: Material(
+        child: Material(
           color: widget.suggestionsOverlayDecoration != null
               ? Colors.transparent
               : Colors.white,
@@ -289,7 +281,9 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
                   )
               ],
             ),
-          )));
+          ),
+        ),
+      );
 
   String _lastText = '';
   Future<void> searchAddress(String text) async {
@@ -298,10 +292,7 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
     }
     if (text != _lastText && text.isNotEmpty) {
       _lastText = text;
-      suggestions = await addressService.search(text,
-          includeFullSuggestionDetails:
-              (widget.onInitialSuggestionClick != null),
-          postalCodeLookup: widget.postalCodeLookup);
+      suggestions = await placeApi.fetchSuggestions(text);
     }
     if (entry != null) {
       entry!.markNeedsBuild();

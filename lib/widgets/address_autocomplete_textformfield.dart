@@ -6,15 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
+import '../api/place_api_provider.dart';
 import 'address_autocomplete_generic.dart';
 import '/model/place.dart';
 import '/model/suggestion.dart';
-import '/service/address_service.dart';
 
 export 'package:google_maps_places_autocomplete_widgets/model/place.dart';
 export 'package:google_maps_places_autocomplete_widgets/model/suggestion.dart';
 
-typedef ReportValidationFailureAndRequestFocusCallback = bool Function(
+typedef ValidationCallBack = bool Function(
     String errorMessageForThisFailedValidation);
 
 class AddressAutocompleteTextFormField
@@ -43,7 +43,7 @@ class AddressAutocompleteTextFormField
 
   //callback triggered when losing focus but no suggestion was selected
   @override
-  final void Function(String text)? onFinishedEditingWithNoSuggestion;
+  final void Function(String text)? onFinishedWithNoSuggestion;
 
   ///Callback triggered when a item is selected
   @override
@@ -98,7 +98,7 @@ class AddressAutocompleteTextFormField
 
   ///used to narrow down address search
   @override
-  final String? componentCountry;
+  final List<String>? componentCountry;
 
   ///Inform Google places of desired language the results should be returned.
   @override
@@ -126,8 +126,7 @@ class AddressAutocompleteTextFormField
   /// Key to use for the TextFormField() widget.
   final Key? textFormFieldKey;
 
-  final ReportValidationFailureAndRequestFocusCallback?
-      reportValidationFailAndRequestFocus;
+  final ValidationCallBack? reportValidationFailAndRequestFocus;
 
   // These correspond to arguments supported by standard Flutter TextFormField
   @override
@@ -238,7 +237,7 @@ class AddressAutocompleteTextFormField
     this.onClearClick,
     this.onInitialSuggestionClick,
     this.onSuggestionClick,
-    this.onFinishedEditingWithNoSuggestion,
+    this.onFinishedWithNoSuggestion,
     this.onSuggestionClickGetTextToUseForControl,
     this.buildItem,
     this.hoverColor,
@@ -307,8 +306,7 @@ class AddressAutocompleteTextFormField
 
 class _AddressAutocompleteTextFormFieldState
     extends State<AddressAutocompleteTextFormField>
-    with SuggestionOverlayMixin
-    implements OverlaySuggestionDetails {
+    with SuggestionOverlayMixin {
   @override
   final LayerLink layerLink = LayerLink();
   @override
@@ -322,7 +320,7 @@ class _AddressAutocompleteTextFormFieldState
   @override
   late final FocusNode focusNode;
   @override
-  late AddressService addressService;
+  late PlaceApiProvider placeApi;
   @override
   OverlayEntry? entry;
   @override
@@ -372,68 +370,63 @@ class _AddressAutocompleteTextFormFieldState
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: layerLink,
-      child: Stack(
-        children: [
-          TextFormField(
-            focusNode: focusNode,
-            controller: controller,
-            onChanged: onTextChanges,
-            decoration: getInputDecoration(),
-            key: widget.textFormFieldKey,
-            validator: widget.validator != null
-                ? validatorWithFocusHandlingWrapper
-                : null,
-            onEditingComplete: widget.onEditingComplete,
+      child: TextFormField(
+        focusNode: focusNode,
+        controller: controller,
+        onChanged: onTextChanges,
+        decoration: getInputDecoration(),
+        key: widget.textFormFieldKey,
+        validator:
+            widget.validator != null ? validatorWithFocusHandlingWrapper : null,
+        onEditingComplete: widget.onEditingComplete,
 
-            // passthru args
-            keyboardType: widget.keyboardType,
-            textCapitalization: widget.textCapitalization,
-            textInputAction: widget.textInputAction,
-            style: widget.style,
-            onSaved: (s) {
-              if (selected == null) return;
-              addressService
-                  .getPlaceDetail(selected!.placeId)
-                  .then((v) => widget.onSave?.call(v));
-            },
-            strutStyle: widget.strutStyle,
-            textDirection: widget.textDirection,
-            textAlign: widget.textAlign,
-            textAlignVertical: widget.textAlignVertical,
-            autofocus: widget.autofocus,
-            readOnly: widget.readOnly,
-            showCursor: widget.showCursor,
-            smartDashesType: widget.smartDashesType,
-            smartQuotesType: widget.smartQuotesType,
-            enableSuggestions: widget.enableSuggestions,
-            maxLengthEnforcement: widget.maxLengthEnforcement,
-            maxLines: widget.maxLines,
-            minLines: widget.minLines,
-            expands: widget.expands,
-            maxLength: widget.maxLength,
-            onTap: widget.onTap,
-            onTapOutside: widget.onTapOutside,
-            onFieldSubmitted: widget.onFieldSubmitted,
-            inputFormatters: widget.inputFormatters,
-            enabled: widget.enabled,
-            cursorWidth: widget.cursorWidth,
-            cursorHeight: widget.cursorHeight,
-            cursorRadius: widget.cursorRadius,
-            cursorColor: widget.cursorColor,
-            keyboardAppearance: widget.keyboardAppearance,
-            scrollPadding: widget.scrollPadding,
-            enableInteractiveSelection: widget.enableInteractiveSelection,
-            selectionControls: widget.selectionControls,
-            buildCounter: widget.buildCounter,
-            scrollPhysics: widget.scrollPhysics,
-            autofillHints: widget.autofillHints,
-            autovalidateMode: widget.autovalidateMode,
-            scrollController: widget.scrollController,
-            enableIMEPersonalizedLearning: widget.enableIMEPersonalizedLearning,
-            mouseCursor: widget.mouseCursor,
-            contextMenuBuilder: widget.contextMenuBuilder,
-          ),
-        ],
+        // passthru args
+        keyboardType: widget.keyboardType,
+        textCapitalization: widget.textCapitalization,
+        textInputAction: widget.textInputAction,
+        style: widget.style,
+        onSaved: (s) {
+          if (selected == null) return;
+          placeApi
+              .getPlaceDetailFromId(selected!.placeId)
+              .then((v) => widget.onSave?.call(v));
+        },
+        strutStyle: widget.strutStyle,
+        textDirection: widget.textDirection,
+        textAlign: widget.textAlign,
+        textAlignVertical: widget.textAlignVertical,
+        autofocus: widget.autofocus,
+        readOnly: widget.readOnly,
+        showCursor: widget.showCursor,
+        smartDashesType: widget.smartDashesType,
+        smartQuotesType: widget.smartQuotesType,
+        enableSuggestions: widget.enableSuggestions,
+        maxLengthEnforcement: widget.maxLengthEnforcement,
+        maxLines: widget.maxLines,
+        minLines: widget.minLines,
+        expands: widget.expands,
+        maxLength: widget.maxLength,
+        onTap: widget.onTap,
+        onTapOutside: widget.onTapOutside,
+        onFieldSubmitted: widget.onFieldSubmitted,
+        inputFormatters: widget.inputFormatters,
+        enabled: widget.enabled,
+        cursorWidth: widget.cursorWidth,
+        cursorHeight: widget.cursorHeight,
+        cursorRadius: widget.cursorRadius,
+        cursorColor: widget.cursorColor,
+        keyboardAppearance: widget.keyboardAppearance,
+        scrollPadding: widget.scrollPadding,
+        enableInteractiveSelection: widget.enableInteractiveSelection,
+        selectionControls: widget.selectionControls,
+        buildCounter: widget.buildCounter,
+        scrollPhysics: widget.scrollPhysics,
+        autofillHints: widget.autofillHints,
+        autovalidateMode: widget.autovalidateMode,
+        scrollController: widget.scrollController,
+        enableIMEPersonalizedLearning: widget.enableIMEPersonalizedLearning,
+        mouseCursor: widget.mouseCursor,
+        contextMenuBuilder: widget.contextMenuBuilder,
       ),
     );
   }
