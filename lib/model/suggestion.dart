@@ -32,9 +32,10 @@ class Suggestion {
     final result = jsonDecode(response.body);
 
     return result['suggestions']
-        .map((s) => Suggestion.fromJson(s['placePrediction']))
-        .toList()
-        .cast<Suggestion>();
+            ?.map((s) => Suggestion.fromJson(s['placePrediction']))
+            .toList()
+            .cast<Suggestion>() ??
+        [];
   }
 
   @override
