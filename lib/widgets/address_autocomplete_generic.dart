@@ -265,7 +265,7 @@ mixin SuggestionOverlayMixin<T extends AddresssAutocompleteStatefulWidget>
   Widget buildOverlay() => TextFieldTapRegion(
         child: Material(
           color: widget.suggestionsOverlayDecoration != null
-              ? Colors.transparent
+              ? widget.suggestionsOverlayDecoration!.color
               : Colors.white,
           elevation: widget.elevation ?? 0,
           child: Container(
